@@ -14,11 +14,11 @@ uint8_t timeDelay = 5;                                                         /
 volatile uint8_t workMode = 0;                                                 // Переменная для хранения текущего режима работы
 volatile bool flagStartButtonAvailable = true;                                 // Флаг доступности кнопки запуска
 volatile bool startMode = false;                                               // Флаг режима запуска
-volatile bool runOnce = false;                                                 // Флаг однократной записи времени
 unsigned long startTimer;                                                      // Переменная для хранения времени начала запуска
 
 void startButton();                                                            // Прототип функции
 void changeMode();                                                             // Прототип функции
+void start_func();                                                             // Прототип функции
 
 void setup() {
   pinMode(Mode1PIN, OUTPUT);                                                   // Настраиваем порт для вывода
@@ -33,12 +33,12 @@ void setup() {
 }
 
 //================== Функция для управления внешними подключениями ============
-void IOcontrol (bool Mode1PINstate, bool Mode2PINstate, bool FuelPINstate, bool SparkPlugPINstate, int LEDstatus) {
+void IOcontrol (bool Mode1PINstate, bool Mode2PINstate, bool FuelPINstate, bool SparkPlugPINstate, uint8_t LED_PWM) {
   digitalWrite (Mode1PIN, Mode1PINstate);
   digitalWrite (Mode2PIN, Mode2PINstate);
   digitalWrite (FuelPIN, FuelPINstate);
   digitalWrite (SparkPlugPIN, SparkPlugPINstate);
-  analogWrite  (LEDPIN, LEDstatus);
+  analogWrite  (LEDPIN, LED_PWM);
 }
 //=============================================================================
 
@@ -47,32 +47,9 @@ void loop() {
     workMode = 0;                                                              // Режим работы 0
   }
   if (startMode && digitalRead(OverheatSensorPIN)) {                           // Если включен запуск и перегрева нет
-    flagStartButtonAvailable = false;                                          // Кнопка запуска недоступна
-    if (!runOnce) {                                                            // Флаг однократности не был взведен
-      startTimer = millis();                                                   // Записываем время
-      runOnce = true;                                                          // Взводим флаг однократности
-    }
-    if ((millis() - startTimer) < (timeBlow * 1000)) {                         // Если прошло меньше времени чем timeBlow
-      IOcontrol (0,1,0,0,50);                                                  // Управляем внешними подключениями
-    }
-    else {                                                                     // Прошло больше времени чем timeBlow
-      if ((millis - startTimer) < ((timeBlow + timeDelay) * 1000)) {           // Прошло меньше времени чем timeBlow + timeDelay
-        IOcontrol (0,0,0,1,50);                                                // Управляем внешними подключениями
-      }
-      else {                                                                   // Прошло больше времени чем timeBlow + timeDelay
-        if ((millis - startTimer) < ((timeBlow + timeSpark) * 1000)) {         // Прошло меньше времени чем timeBlow + timeSpark
-          IOcontrol (1,0,1,1,50);                                              // Управляем внешними подключениями
-        }
-        else {                                                                 // Прошло больше времени чем timeBlow + timeSpark
-          startMode = false;                                                   // Запуск завершен
-          runOnce = false;                                                     // Однократность записи времени снята (можно записывать новое время)
-          flagStartButtonAvailable = true;                                     // Кнопка запуска доступна
-          workMode = 1;                                                        // Режим работы 1
-        }
-      }
-    }
+    start_func();                                                              // Запускаем
   }
-  else {
+  else {                                                                       // Если это не режим запуска
     switch (workMode) {                                                        // В зависимости от режима работы управляем внешними подключениями
       case 0:
       IOcontrol (0,0,0,0,0);
@@ -120,3 +97,29 @@ void changeMode() {
   }
 }
 //=============================================================================
+
+//============ Режим запуска ==================================================
+void start_func() {
+  if (flagStartButtonAvailable) {                                            // Если кнопка еще доступна (мы попали в функцию в первый раз)
+    startTimer = millis();                                                   // Записываем время (однократно для запуска)
+    flagStartButtonAvailable = false;                                        // Кнопка запуска недоступна
+  }
+  if ((millis() - startTimer) < (timeBlow * 1000)) {                         // Если прошло меньше времени чем timeBlow
+    IOcontrol (0,1,0,0,50);                                                  // Управляем внешними подключениями
+  }
+  else {                                                                     // Прошло больше времени чем timeBlow
+    if ((millis - startTimer) < ((timeBlow + timeDelay) * 1000)) {           // Прошло меньше времени чем timeBlow + timeDelay
+      IOcontrol (0,0,0,1,50);                                                // Управляем внешними подключениями
+    }
+    else {                                                                   // Прошло больше времени чем timeBlow + timeDelay
+      if ((millis - startTimer) < ((timeBlow + timeSpark) * 1000)) {         // Прошло меньше времени чем timeBlow + timeSpark
+        IOcontrol (1,0,1,1,50);                                              // Управляем внешними подключениями
+      }
+      else {                                                                 // Прошло больше времени чем timeBlow + timeSpark
+        startMode = false;                                                   // Запуск завершен
+        flagStartButtonAvailable = true;                                     // Кнопка запуска доступна
+        workMode = 1;                                                        // Режим работы 1
+      }
+    }
+  }
+}
