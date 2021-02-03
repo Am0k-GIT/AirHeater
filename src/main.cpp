@@ -3,9 +3,9 @@
 
 #define Mode1PIN 5                                                             // PIN управления режимом 1 (0 - выкл, 1 - вкл.)
 #define Mode2PIN 6                                                             // PIN управления режимом 2 (0 - выкл, 1 - вкл.)
-#define FuelPIN 9                                                              // PIN управления топливным клапаном (0 - выкл, 1 - вкл.)
+#define FuelPIN 7                                                              // PIN управления топливным клапаном (0 - выкл, 1 - вкл.)
 #define SparkPlugPIN 8                                                         // PIN управления свечей (0 - выкл, 1 - вкл.)
-#define LEDPIN 7                                                               // PIN для подключения светодиода
+#define LEDPIN 9                                                               // PIN для подключения светодиода
 #define OverheatSensorPIN A0                                                   // PIN для подключения датчика перегрева (1 - норма, 0 - авария)
 
 //#define WDT_ENABLE                                                           // Включаем WDT (не работает на старых bootloader'ах)
@@ -17,9 +17,9 @@
 #define DEBUG(x)
 #endif
 
-uint16_t timeBlow = 20;                                                         // Время работы 2 режима при запуске
-uint16_t timeSpark = 15;                                                        // Время работы свечей при запуске
-uint16_t timeDelay = 5;                                                         // Задержка включения 1 режима при запуске
+uint16_t timeBlow = 20;                                                        // Время работы 2 режима при запуске
+uint16_t timeSpark = 15;                                                       // Время работы свечей при запуске
+uint16_t timeDelay = 5;                                                        // Задержка включения 1 режима при запуске
 volatile uint8_t workMode = 0;                                                 // Переменная для хранения текущего режима работы
 volatile bool flagStartButtonAvailable = true;                                 // Флаг доступности кнопки запуска
 volatile bool startMode = false;                                               // Флаг режима запуска
@@ -67,12 +67,12 @@ void start_func() {
     IOcontrol (0,1,0,0,50);                                                  // Управляем внешними подключениями
   }
   else {                                                                     // Прошло больше времени чем timeBlow
-    if ((millis() - startTimer) < ((timeBlow + timeDelay) * 1000)) {           // Прошло меньше времени чем timeBlow + timeDelay
+    if ((millis() - startTimer) < ((timeBlow + timeDelay) * 1000)) {         // Прошло меньше времени чем timeBlow + timeDelay
       DEBUG("Spark ( IOcontrol 0,0,0,1,50 )");
       IOcontrol (0,0,0,1,50);                                                // Управляем внешними подключениями
     }
     else {                                                                   // Прошло больше времени чем timeBlow + timeDelay
-      if ((millis() - startTimer) < ((timeBlow + timeSpark) * 1000)) {         // Прошло меньше времени чем timeBlow + timeSpark
+      if ((millis() - startTimer) < ((timeBlow + timeSpark) * 1000)) {       // Прошло меньше времени чем timeBlow + timeSpark
         DEBUG("Spark + Fuel ( IOcontrol 1,0,1,1,50 )");
         IOcontrol (1,0,1,1,50);                                              // Управляем внешними подключениями
       }
