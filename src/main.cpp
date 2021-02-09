@@ -64,17 +64,17 @@ void start_func() {
   }
   if ((millis() - startTimer) < (timeBlow * 1000)) {                         // Если прошло меньше времени чем timeBlow
     DEBUG("BLOW ( IOcontrol 0,1,0,0,50 )");
-    IOcontrol (0,1,0,0,50);                                                  // Управляем внешними подключениями
+    IOcontrol (0,1,0,0,10);                                                  // Управляем внешними подключениями
   }
   else {                                                                     // Прошло больше времени чем timeBlow
     if ((millis() - startTimer) < ((timeBlow + timeDelay) * 1000)) {         // Прошло меньше времени чем timeBlow + timeDelay
       DEBUG("Spark ( IOcontrol 0,0,0,1,50 )");
-      IOcontrol (0,0,0,1,50);                                                // Управляем внешними подключениями
+      IOcontrol (0,0,0,1,25);                                                // Управляем внешними подключениями
     }
     else {                                                                   // Прошло больше времени чем timeBlow + timeDelay
       if ((millis() - startTimer) < ((timeBlow + timeSpark) * 1000)) {       // Прошло меньше времени чем timeBlow + timeSpark
         DEBUG("Spark + Fuel ( IOcontrol 1,0,1,1,50 )");
-        IOcontrol (1,0,1,1,50);                                              // Управляем внешними подключениями
+        IOcontrol (1,0,1,1,25);                                              // Управляем внешними подключениями
       }
       else {                                                                 // Прошло больше времени чем timeBlow + timeSpark
         DEBUG("Start end");
@@ -102,7 +102,7 @@ void loop() {
       DEBUG("Work Mode 0 (off)");
       break;
       case 1:
-      IOcontrol (1,0,1,0,127);
+      IOcontrol (1,0,1,0,50);
       DEBUG("Work Mode 1");
       break;
       case 2:
@@ -144,6 +144,7 @@ void changeMode() {
         workMode = 2;
       }
       else if (workMode == 2) {
+        workMode = 1;
       }
     }
     millis_prev = millis();
