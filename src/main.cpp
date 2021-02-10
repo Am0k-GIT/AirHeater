@@ -25,7 +25,10 @@ volatile uint8_t workMode = 0;                                                 /
 volatile bool flagStartButtonAvailable = true;                                 // Флаг доступности кнопки запуска
 volatile bool startMode = false;                                               // Флаг режима запуска
 volatile bool stopMode = false;                                                // Флаг режима остановки
+volatile bool flagTimeLedAvailable = true;                                     // Флаг доступности таймера изменения состояния светодиода "Работа"
+volatile bool LED_status = false;
 unsigned long startTimer;                                                      // Переменная для хранения времени начала запуска
+unsigned long LedTimer;
 
 void startButton();                                                            // Прототип функции
 void changeMode();                                                             // Прототип функции
@@ -48,13 +51,28 @@ void setup() {
   #endif
 }
 
+//============ Управление режимом светодиода "Работа" =========================
+void LED_func(uint16_t time) {
+ if (flagTimeLedAvailable) {
+   flagTimeLedAvailable = false;
+   LedTimer = millis();
+   LED_status = !LED_status;
+   digitalWrite (LEDPIN, LED_status);
+ }
+ else {
+   if ((millis() - LedTimer) > (time)) {
+     flagTimeLedAvailable = true;
+   }
+ }
+}
+//=============================================================================
+
 //================== Функция для управления внешними подключениями ============
-void IOcontrol (bool Mode1PINstate, bool Mode2PINstate, bool FuelPINstate, bool SparkPlugPINstate, uint8_t LED_PWM) {
+void IOcontrol (bool Mode1PINstate, bool Mode2PINstate, bool FuelPINstate, bool SparkPlugPINstate) {
   digitalWrite (Mode1PIN, Mode1PINstate);
   digitalWrite (Mode2PIN, Mode2PINstate);
   digitalWrite (FuelPIN, FuelPINstate);
   digitalWrite (SparkPlugPIN, SparkPlugPINstate);
-  analogWrite  (LEDPIN, LED_PWM);
 }
 //=============================================================================
 
@@ -66,18 +84,21 @@ void start_func() {
     flagStartButtonAvailable = false;                                          // Кнопка запуска недоступна
   }
   if ((millis() - startTimer) < (timeBlow * 1000)) {                           // Если прошло меньше времени чем timeBlow
-    DEBUG("BLOW ( IOcontrol 0,1,0,0,10 )");
-    IOcontrol (0,1,0,0,10);                                                    // Управляем внешними подключениями
+    DEBUG("BLOW ( IOcontrol 0,1,0,0 )");
+    IOcontrol (0,1,0,0);                                                       // Управляем внешними подключениями
+    LED_func(800);
   }
   else {                                                                       // Прошло больше времени чем timeBlow
     if ((millis() - startTimer) < ((timeBlow + timeDelay) * 1000)) {           // Прошло меньше времени чем timeBlow + timeDelay
-      DEBUG("Spark ( IOcontrol 0,0,0,1,25 )");
-      IOcontrol (0,0,0,1,25);                                                  // Управляем внешними подключениями
+      DEBUG("Spark ( IOcontrol 0,0,0,1 )");
+      IOcontrol (0,0,0,1);                                                     // Управляем внешними подключениями
+      LED_func(300);
     }
     else {                                                                     // Прошло больше времени чем timeBlow + timeDelay
       if ((millis() - startTimer) < ((timeBlow + timeSpark) * 1000)) {         // Прошло меньше времени чем timeBlow + timeSpark
-        DEBUG("Spark + Fuel ( IOcontrol 1,0,1,1,25 )");
-        IOcontrol (1,0,1,1,25);                                                // Управляем внешними подключениями
+        DEBUG("Spark + Fuel ( IOcontrol 1,0,1,1 )");
+        IOcontrol (1,0,1,1);                                                   // Управляем внешними подключениями
+        LED_func(100);
       }
       else {                                                                   // Прошло больше времени чем timeBlow + timeSpark
         DEBUG("Start end");
@@ -94,8 +115,9 @@ void start_func() {
 void stop_func() {
   flagStartButtonAvailable = false;                                            // Делаем кнопки недоступными
   if (!digitalRead(WorkSensorPIN)) {                                           // Если на выходе датчика работы 0 (он нагрет)
-    DEBUG("STOP BLOW ( IOcontrol 0,1,0,0,10 )");
-    IOcontrol (0,1,0,0,10);                                                    // Управляем внешними подключениями
+    DEBUG("STOP BLOW ( IOcontrol 0,1,0,0 )");
+    IOcontrol (0,1,0,0);                                                       // Управляем внешними подключениями
+    LED_func(1000);
   }
   else {                                                                       // Если на выходе датчика работы 1 (он остыл)
     workMode = 0;                                                              // Режим работы переводим в выключенно
@@ -104,7 +126,6 @@ void stop_func() {
   }
 }
 //=============================================================================
-
 
 void loop() {
   if (!digitalRead(OverheatSensorPIN)) {                                       // Если сработал датчик перегрева
@@ -121,18 +142,19 @@ void loop() {
     if (!startMode && !stopMode) {                                             // Если это не режим запуска или остановки
       switch (workMode) {                                                      // В зависимости от режима работы управляем внешними подключениями
         case 0:
-        IOcontrol (0,0,0,0,0);
+        IOcontrol (0,0,0,0);
         DEBUG("Work Mode 0 (off)");
         break;
         case 1:
-        IOcontrol (1,0,1,0,50);
+        IOcontrol (1,0,1,0);
         DEBUG("Work Mode 1");
         break;
         case 2:
-        IOcontrol (0,1,1,0,255);
+        IOcontrol (0,1,1,0);
         DEBUG("Work Mode 2");
         break;
       }
+      digitalWrite (LEDPIN, !digitalRead(WorkSensorPIN));
     }
   }
   #ifdef WDT_ENABLE
